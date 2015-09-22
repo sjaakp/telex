@@ -1,0 +1,50 @@
+@charset "utf-8";
+
+/* 22-9-2015, 11:30 */
+
+.telex {
+    overflow: hidden;
+    white-space: nowrap;
+}
+.telex:after {
+    content: ' ';
+    clear: both;
+    display: block;
+}
+
+.telex-inner {
+    float: left;
+    width: 60000px;
+}
+
+.telex-msg {
+    float: left;
+    animation: none 0s linear 0s;
+}
+.telex-inner.telex-right,
+.telex-right .telex-msg   {
+    float: right;
+}
+.telex-ease .telex-msg {
+    animation-timing-function: ease;
+}
+
+/* styling */
+.telex {
+    background-color: lightgrey;
+}
+
+.telex-msg {
+    padding-left: 20px;
+    padding-right: 20px;
+}
+
+.msg1 {
+    background-color: lightgoldenrodyellow;
+}
+.msg2 {
+    background-color: lightblue;
+}
+.msg3 {
+    background-color: lightcyan;
+}
