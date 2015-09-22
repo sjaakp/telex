@@ -1,0 +1,2 @@
+# telex
+jQuery news scroller
