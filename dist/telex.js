@@ -1,174 +1,272 @@
 /*global Math, jQuery, window, console */
 /*jslint nomen: true, unparam: true, white: true, plusplus: true, todo: true */
+/**
+ * MIT licence
+ * Version 1.0.0
+ * Sjaak Priester, Amsterdam 04-10-2015.
+ * @link http://www.sjaakpriester.nl/
+ */
 
-(function($, undefined) {
-    "use strict";
+(function ($, undefined) {
+    'use strict';
 
-    $.fn.telex = function(options, arg) {
+    $.widget('sjaakp.telex', {
 
-        return this.each(function() {
+        options:    {
 
-            var $this = $(this),
-                settings,
-                containerWidth,
-                $head,
-                inner,
-                msgs,
-                leading,
+            /**
+             * Delay time before scrolling starts in milliseconds
+             */
+            delay: 1000,
 
-            // private methods
-                _pause = function()  {
-                    $this.find('.telex-leading').css('animation-play-state', 'paused');
-                },
-                _resume = function()  {
-                    $this.find('.telex-leading').css('animation-play-state', 'running');
-                },
-                _prepareMsg = function(msg) {       // msg: jQuery element
-                    var w = msg.outerWidth();
+            /**
+             * integer, time it takes for a message to scroll along main window in milliseconds
+             */
+            duration: 5000,
 
-                    if (! $head.find('#tx' + w).length)  {    // skip if already exists
-                        $head.append($('<style>', {     // append style block with keyframes to head
-                            id: 'tx' + w
-                        }).text('@keyframes tx-left' + w + ' {from {margin-left:0;} to {margin-left:-' + w + 'px;}} @keyframes tx-right' + w + ' {from {margin-right:0;} to {margin-right:-' + w + 'px;}}'));
-                    }           // margin is animated from 0 to minus outer width
-                },
-                _makeClones = function(fromMsg, nMsgs)   {
-                    var i, j, w, msg = fromMsg, wMax = 0, wTotal = 0, nTimes;
+            /**
+             *  'normal' (to left) or  'reverse' (to right) - direction of movement
+             */
+            direction: 'normal',
 
-                    for (j = 0; j < nMsgs; j++) {
-                        w = msg.outerWidth();
-                        if (w > wMax) { wMax = w; }
-                        wTotal += w;
-                    }
+            /** string, timing-function used for the animation; 'ease-in-out' may be another useful value
+             * @see https://developer.mozilla.org/en-US/docs/Web/CSS/animation-timing-function
+             */
+            timing: 'linear',
 
-                    nTimes = Math.floor((containerWidth + wMax) / wTotal) - 1;
+            /**
+             * boolean, pause ticker on hover
+             */
+            pauseOnHover: false,
 
-                    for (i = 0; i < nTimes; i++)    {
-                        msg = fromMsg;
-                        for (j = 0; j < nMsgs; j++) {
-                            inner.append(msg.clone());
-                            msg = msg.next();
-                        }
-                    }
-                },
-                _setLeading = function(msg) {       // msg: jQuery element
-                    var w = msg.outerWidth(),
-                        keyframes = 'tx-' + settings.direction + w;
+            /**
+             *  array of messages.
+             *  A message is a plain object having the properties:
+             *  - content   The content of the message. Can be text, but also a piece of HTML (like a link).
+             *  - id        (Optional). Id of the message, starting with a word character. It is only used in the `remove` method.
+             *  - class     (Optional). The CSS-class of the message. May be used for styling purposes.
+             */
+            messages: []
+        },
 
-                    leading = msg;
-                    msg.addClass('telex-leading').css({
-                        animationName: keyframes,
-                        animationDuration: (w * settings.duration / containerWidth) + 'ms'
-                    });
-                },
-                _unsetLeading = function()  {       // return: previous leading
-                    var r = leading;
+        _blocks: [],
 
-                    leading = null;
-                    r.removeClass('telex-leading').css({
-                        animationName:  'none',
-                        animationDuration: '0s',
-                        animationDelay: '0s',
-                        marginLeft: '0',
-                        marginRight: '0'
-                    });
-                    return r;
-                },
-                _setLeadingDelayed = function(msg)  {
-                    var w = msg.outerWidth(),
-                        mgnProp = 'margin-' + settings.direction;
+        _leading: null,
 
-                    msg.css(mgnProp, containerWidth);
-                    $head.append('<style>@keyframes txstart {from {' + mgnProp + ':' + containerWidth + 'px;} to {' + mgnProp + ':-' + w + 'px;}}</style>');
-                    msg.css({
-                        animationName: 'txstart',
-                        animationDuration: ((containerWidth + w) * settings.duration / containerWidth) + 'ms',
-                        animationDelay: settings.delay + 'ms'
-                    });
-                },
+        _create: function() {
+            $('<style>').text('.telex{overflow: hidden;white-space: nowrap;}.telex-inner{height: 1.5em;width: 60000px;}.telex-msg{display: inline-block;height: 100%;}.telex{background-color: #eceff1;}.telex-msg{padding-left: 1.5em;padding-right: 1.5em;}').insertBefore($('[rel=stylesheet]').first());
 
+            this._inner = $('<div>', {
+                class: 'telex-inner'
+            });
 
-            // public functions
-                methods = {
-                    add: function (msgContent) {
-                        return 0;
-                    },
-                    remove: function(msgId) {
-                        return true;
-                    },
-                    pause: function()   {
-                        _pause();
-                    },
-                    resume: function()  {
-                        _resume();
-                    }
-                };
+            this.element.addClass('telex').append(this._inner);
 
-            if (typeof options === 'string') {
-                if ($.isFunction(methods[options])) {
-                    return methods[options](arg);
+            this._prepareBlocks();
+
+            this.element.on('animationend', function(e) {
+                this._nextBlock();
+            }.bind(this)).on('mouseenter', function(e) {
+                if (this.options.pauseOnHover) { this.pause(); }
+            }.bind(this)).on('mouseleave', function(e) {
+                if (this.options.pauseOnHover) { this.resume(); }
+            }.bind(this));
+
+            this._start(true);
+        },
+
+        _start: function(delay) {
+            var first = this._inner.children(':first-child'),
+                from = 0,
+                wTelex = this.element.width();
+
+            if (first.length)   {
+                if (this.options.delay) { first.css('margin-left', wTelex); }
+
+                if (this.options.direction === 'normal')    {
+                    from = wTelex;
+                    this._generateKeyframes(from, first.outerWidth());
                 }
-                return;
+                else    {
+                    first = this._inner.children(':last-child');
+                    first.css('margin-left', - first.outerWidth());
+                    this._inner.prepend(first);
+                }
+
+                this._setLeading(first, from, true);
             }
+        },
 
-            settings = $.extend({}, $this.telex.defaults, {
-                direction: $this.css('direction') === 'rtl' ? 'right' : 'left'
-            }, options);
+        /**
+         * @param from      begin value of normal animation (generally 0)
+         * @param to        absolute value of end value (generally outer width of message)
+         * @private
+         */
+        _generateKeyframes: function(from, to) {
+            var $head = $('head'), id = 'f' + from + 't' + to;
 
-            containerWidth = $this.width();
-            $head = $('head');
+            if (! $head.find('#' + id).length)  {    // skip if already exists
+                $head.append($('<style>', {     // append style block with keyframes to head
+                    id: id
+                }).text('@keyframes ' + id + ' {from {margin-left:' + from + 'px;} to {margin-left:-' + to + 'px;}}'));
+            }           // note minus sign before to!
+        },
 
-            $this.addClass('telex').wrapInner($('<div>', {
-                class: 'telex-inner telex-' + settings.direction + (settings.ease ? ' telex-ease' : '')
-            }));
+        /**
+         * @param e         msg element
+         * @param from      begin value of animation
+         * @param delay     boolean whether delay should be applied
+         * @returns e
+         * @private
+         */
+        _setLeading: function(e, from, delay) {
+            var w = e.outerWidth();
 
-            inner = $this.children();
-            msgs = inner.children().addClass('telex-msg');
-
-            msgs.each(function(i, e) {
-                _prepareMsg($(e));
+            this._leading = e;
+            e.css({
+                animationName: 'f' + from + 't' + w,
+                animationDirection: this.options.direction,
+                animationDuration: ((w + from) * this.options.duration / this.element.width()) + 'ms',
+                animationTimingFunction: this.options.timing,
+                animationDelay: (delay ? this.options.delay : 0) + 'ms'
             });
+            return e;
+        },
 
-            leading = msgs.first();
+        _unsetLeading: function() { // return: previous leading element
+            var r = this._leading;
 
-            _makeClones(leading, msgs.length);
+            if (r)  {
+                this._leading = null;
+                r.css({
+                    animationName:  'none',
+                    marginLeft: 0
+                });
+            }
+            return r;
+        },
 
-            $this.on('animationend', function(e) {
-                inner.append(_unsetLeading());
-                _setLeading(inner.children(':first-child'));
-            }).on('mouseenter', function(e) {
-                if (settings.pauseOnHover) { _pause(); }
-            }).on('mouseleave', function(e) {
-                if (settings.pauseOnHover) { _resume(); }
-            });
+        _nextBlock: function()  {
+            var dir = this.options.direction, b, w, par, last = false;
 
-            if (settings.delay) {
-                _setLeadingDelayed(leading);
+            if (this._leading.css('animation-direction') !== dir) {  // direction flipped
+                w = this._leading.outerWidth();
+                par = {
+                    animationName: 'f0t' + w,
+                    animationDirection: dir,
+                    animationDuration: (w * this.options.duration / this.element.width()) + 'ms',
+                    animationDelay: '0s'
+                };
+                this._leading.css({
+                    animationName:  'none'
+                });
+
+                // pause for a small time and flip direction
+                // (Edge seems to need 100 ms, Chrome and Firefox manage with 1 ms)
+                window.setTimeout(function(leading, par) {
+                    leading.css(par);
+                }, 200, this._leading, par);
+            }
+            else    {       // normal operation, direction unchanged
+                if (dir === 'normal')   {
+                    b = this._unsetLeading();
+                    if (b) {
+                        if (b.hasClass('telex-discard'))    { b.remove(); }
+                        else { this._inner.append(b); }
+                    }
+                    this._setLeading(this._inner.children(':first-child'), 0, false);
+                }
+                else    {
+                    this._unsetLeading();
+                    b = this._inner.children(':last-child');
+                    while (b.length && b.hasClass('telex-discard') && ! b.hasClass('telex-last')) {
+                        b.remove();
+                        b = this._inner.children(':last-child');
+                    }
+                    last = b.hasClass('telex-last');
+                    b.removeClass('telex-last');
+                    this._setLeading(b.prependTo(this._inner), last ? this.element.width() : 0, false);
+                }
+            }
+        },
+
+        _prepareBlocks: function()  {
+            var wMax = 0, wTotal = 0, nCycles, i,
+                appendClone = function(v, i, a) { this._inner.append(v.clone()); };
+
+            if (this.options.messages.length)   {
+                this._blocks = this.options.messages.map(function(v, i, a) {
+                    var w, b = $('<div>', {
+                        class: 'telex-msg ' + (v.class || '')
+                    }).html(v.content || '');
+
+                    this._inner.append(b);
+                    w = b.outerWidth();     // determine after b is placed in DOM
+                    this._generateKeyframes(0, w);
+                    wTotal += w;
+                    if (w > wMax)   { wMax = w; }
+
+                    return b;
+                }, this);
+
+                if (wTotal) {
+                    nCycles = Math.floor((this.element.width() + wMax) / wTotal);
+
+                    for (i = 0; i < nCycles; i++)    {
+                        this._blocks.forEach(appendClone, this);
+                    }
+                }
             }
             else    {
-                _setLeading(leading);
+                this._inner.children(':last-child').addClass('telex-last');
             }
-        });
-    };
 
+        },
 
-//    $.fn.marquee.idCounter = 0;
+        _discardBlocks: function()  {
+            this._inner.children().addClass('telex-discard');
+        },
 
-    $.fn.telex.defaults = {
-        // delay time before animation starts in milliseconds
-        delay: 1000,
+        _setOption: function(key, value)    {
+            var n = this._inner.children().length;
 
-        //true or false - should the marquee be duplicated to show an effect of continues flow
-        duration: 5000,
+            this._super(key, value);
+            if (key === 'messages') {
+                this._discardBlocks();
+                this._prepareBlocks();
+                if (! n) { this._start(false); }
+            }
+        },
 
-        // 'left' or  'right' - direction of movement; default for ltr-text: 'left', default for rtl-text: 'right'
-        direction: 'left',
+        _setOptions: function(options)  {
+            this._super(options);
+        },
 
-        // true: anmimation-timing-function is 'ease'; false: linear animation
-        ease: false,
+        add: function(message) {
+            var n = this._inner.children().length;
+            this._discardBlocks();
+            this.options.messages.unshift(message);
+            this._prepareBlocks();
+            if (! n) {
+                this._start(false);
+            }
+        },
 
-        // pause ticker on hover
-        pauseOnHover: false
-    };
-}(jQuery));
+        remove: function(id) {
+            this._discardBlocks();
+            this.options.messages = this.options.messages.filter(function(v, i, a) {
+                return v.id !== id;
+            }, this);
+            this._prepareBlocks();
+        },
 
+        pause: function()   {
+            this._leading.css('animation-play-state', 'paused');
+        },
+
+        resume: function()   {
+            this._leading.css('animation-play-state', 'running');
+        }
+    });
+
+} (jQuery));

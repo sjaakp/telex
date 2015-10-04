@@ -17,6 +17,7 @@
   "license": "MIT",
   "dependencies": {
     "jquery": ">=1.8",
+    "jquery-ui": ">=1.11"
   },
   "ignore": [
     "**/.*"
