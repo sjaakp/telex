@@ -134,7 +134,7 @@ Options can be read with:
 
 **Telex** has four methods. They should be called in the jQuery UI-fashion, i.e:
 
-	$("#tx").dateline("add", {
+	$("#tx").telex("add", {
 		id: "newMsg",
 		content: "This message is added while Telex is running"
 	});  
