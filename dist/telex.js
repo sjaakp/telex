@@ -53,6 +53,8 @@
 
         _leading: null,
 
+        _useKeyframesIds: [],
+
         _create: function() {
             $('<style>').text('.telex{overflow: hidden;white-space: nowrap;}.telex-inner{height: 1.5em;width: 60000px;}.telex-msg{display: inline-block;height: 100%;}.telex{background-color: #eceff1;}.telex-msg{padding-left: 1.5em;padding-right: 1.5em;}').insertBefore($('[rel=stylesheet]').first());
 
@@ -106,6 +108,7 @@
             var $head = $('head'), id = 'f' + from + 't' + to;
 
             if (! $head.find('#' + id).length)  {    // skip if already exists
+                this._useKeyframesIds.push({from: from, to: to})
                 $head.append($('<style>', {     // append style block with keyframes to head
                     id: id
                 }).text('@keyframes ' + id + ' {from {margin-left:' + from + 'px;} to {margin-left:-' + to + 'px;}}'));
@@ -124,7 +127,7 @@
 
             this._leading = e;
             e.css({
-                animationName: 'f' + from + 't' + w,
+                animationName: this._getAnimationName(from, w),
                 animationDirection: this.options.direction,
                 animationDuration: ((w + from) * this.options.duration / this.element.width()) + 'ms',
                 animationTimingFunction: this.options.timing,
@@ -132,6 +135,24 @@
             });
             return e;
         },
+
+        _getAnimationName: function(from, w) {
+            var useKeyframesIds = this._useKeyframesIds
+            var minDifferenceKeyFrame
+            for (var i = 0; i < useKeyframesIds.length; i++) {
+                if (i == 0) {
+                    minDifferenceKeyFrame = useKeyframesIds[i]
+                } else {
+                    var newDistance = Math.abs(useKeyframesIds[i].from - from) + Math.abs(useKeyframesIds[i].to - w);
+                    if (Math.abs(useKeyframesIds[i].from - from) + Math.abs(useKeyframesIds[i].to - w)
+                        < Math.abs(minDifferenceKeyFrame.from - from) + Math.abs(minDifferenceKeyFrame.to - w)) {
+                        minDifferenceKeyFrame = useKeyframesIds[i]
+                    }
+                }
+            }
+            return 'f' + minDifferenceKeyFrame.from + 't' + minDifferenceKeyFrame.to
+        },
+
 
         _unsetLeading: function() { // return: previous leading element
             var r = this._leading;
@@ -195,32 +216,45 @@
                 appendClone = function(v, i, a) { this._inner.append(v.clone()); };
 
             if (this.options.messages.length)   {
-                this._blocks = this.options.messages.map(function(v, i, a) {
-                    var w, b = $('<div>', {
-                        class: 'telex-msg ' + (v.class || '')
-                    }).html(v.content || '');
 
-                    this._inner.append(b);
-                    w = b.outerWidth();     // determine after b is placed in DOM
-                    this._generateKeyframes(0, w);
-                    wTotal += w;
-                    if (w > wMax)   { wMax = w; }
+                var allBlocksElements;
+
+                //var firstElement;
+                this._blocks = this.options.messages.map(function(v, i, a) {
+                    var b = '<div class="telex-msg">' + v.content + '</div>'
+
+                    if (allBlocksElements) {
+                        allBlocksElements  += b
+                    } else {
+                        allBlocksElements = b
+                    }
 
                     return b;
                 }, this);
 
-                if (wTotal) {
-                    nCycles = Math.floor((this.element.width() + wMax) / wTotal);
+                if (allBlocksElements) {
+                    var numberOfChildren = this._inner[0].childNodes.length
+                    this._inner.append(allBlocksElements)
 
-                    for (i = 0; i < nCycles; i++)    {
-                        this._blocks.forEach(appendClone, this);
+                    for (var i = numberOfChildren, n = this._inner[0].childNodes.length; i < n; i++) {
+                        var width = $(this._inner[0].childNodes[i]).outerWidth()
+                        this._generateKeyframes(0, width);
+
+                        wTotal += width
+                        if (wMax <  width) {
+                            wMax = width
+                        }
                     }
                 }
-            }
-            else    {
+                if (wTotal) {
+                    nCycles = Math.floor((this.element.width() + wMax) / wTotal);
+                    for (i = 0; i < nCycles; i++)    {
+                        this._inner.append(allBlocksElements)
+                    }
+                }
+            } else {
                 this._inner.children(':last-child').addClass('telex-last');
             }
-
         },
 
         _discardBlocks: function()  {
