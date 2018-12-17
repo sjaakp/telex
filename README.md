@@ -1,11 +1,11 @@
-Telex
-=====
+Telex 2.0
+=========
 
-#### jQuery news scroller ####
+#### News scroller ####
 
-**Telex** is a jQuery UI horizontal news scroller for text messages. Messages can be added or removed while scrolling.
+**Telex** is a horizontal news scroller for text messages. It can be used for continuously displaying breaking news, traffic information, stock quotes, and the like. Messages can be added or removed while scrolling, speed and other options can be updated.
 
-**Telex** works with modern browsers supporting the CSS property `animation`. This includes:
+**Telex** is a Javascript (ES2015) widget. It works with modern browsers supporting the CSS property `animation`. This includes:
 
 - IE >= 10
 - Edge
@@ -27,21 +27,17 @@ Install **Telex** with [Bower](http://bower.io/):
 
 	bower install telex
 
-You can also manually install **Dateline** by [downloading the source in ZIP-format](https://github.com/sjaakp/telex/archive/master.zip).
+You can also manually install **Telex** by [downloading the source in ZIP-format](https://github.com/sjaakp/telex/archive/master.zip).
 
 ## Dependencies ##
 
-**Telex** depends on:
-
-- jQuery 1.8
-- jQuery UI 1.1
+From version 2.0, **Telex** has no external dependencies whatsoever.
 
 ## Usage ##
 
-- Load the Javascript libraries `jquery.js` and `jquery-ui.js` (you probably need some of them on your page anyway).
 - Load `/dist/telex.js`.
 - Create a `<div>` with an `id`. 
-- In the document-ready function, encapsulate the `<div>` in a jQuery object, and call the `telex()` method.
+- In the document-ready function, set a Javascript variable with the result of a call to the function `Telex.widget` with parameters `id`, options and (optionally) the first messages. Options are in a Javascript Plain Old Object, messages are in a Javascript Array.
 
 A minimum HTML page with a **Telex** would look like this:
 
@@ -50,23 +46,22 @@ A minimum HTML page with a **Telex** would look like this:
 
 		<div id="tx"></div>
 
-		<script src=".../jquery.js"></script>
-		<script src=".../jquery-ui.js"></script>
 		<script src="/dist/telex.js"></script>
 
 		<script>
 			$(document).ready(function () {
-				$('#tx').telex(/* options */);
+				var qtx = Telex.widget("tx", {/* options */}, [/* messages */]);
 		</script>
 	</body>
 	</html>
 
+The **Telex**-container gets the CSS-class `telex`. This may also be used for styling purposes.
+
 ## Messages ##
 
-At this point, Dateline displays nothing, because there are no messages defined. This is done by setting the option `messages`, like so:
+Messages can be set at create time, but also by assigning a value to **Telex**'s property `messages`, like so:
 
-	$('#tx').telex({
-		messages: [
+	qtx.messages: [
 			{
             	id: 'msg1',
             	content: 'This is the first message'
@@ -81,7 +76,7 @@ At this point, Dateline displays nothing, because there are no messages defined.
 		/* more options... */
 		});
 
-`messages` is an array of objects, each representing a message, with the following properties:
+`messages` is an `Array` of `Objects`, each representing a message, with the following properties:
 
 #### content ####
 
@@ -89,23 +84,21 @@ The content of the message. Can be text, but also a piece of HTML (like a link).
 
 #### id ####
 
-*Optional*. Id of the message, starting with a word character. It is only used in the `remove` method.
+*Optional*. Id of the message, starting with a word character. It is only used in the `remove` method. It is not employed as a DOM-id.
 
 #### class ####
 
 *Optional*. The CSS-class of the message. May be used for styling purposes.
 
+A message may also be represented by a `String` in stead of an `Object`. 
+
 ## Other options ##
 
 **Telex** has the following general options:
 
-#### delay ####
+#### speed ####
 
-`integer`. Delay before scrolling starts in milliseconds. Default: `1000`.
-
-#### duration ####
-
-`integer`. Time it takes for a message to scroll along **Telex** main window in milliseconds. Default: `5000`.
+`integer` or `float`. Scrolling speed in pixels per second. Default: `200`.
 
 #### direction ####
 
@@ -119,24 +112,27 @@ The content of the message. Can be text, but also a piece of HTML (like a link).
 
 `boolean`. Determines whether the scrolling pauses when the mouse cursor hovers above it. Default: `false`.
 
+#### onCycle ####
+
+`function(tlx)`. Callback function, called after each completed cycle of newly loaded messages. This may be used as an opportunity to load new (realtime) messages.
 
 ## Setting and getting options ##
 
-**Telex** is a [jQuery UI widget](http://wiki.jqueryui.com/w/page/12137708/How%20to%20use%20jQuery%20UI%20widgets "jQuery wiki"). The options can (and should) be set at create time, or later at run time by using:
+Options can (and should) be set at create time, and later simply by assigning a value to the **Telex** property with the option name:
 
-	$("#tx").telex("option", "<optionName>", <newValue>);  
+	qtx.speed = <newValue>;  
 
 Options can be read with:
 
-	var value = $("#tx").telex("option", "<optionName>");
+	<value> = qtx.direction;
 
 ## Methods ##
 
-**Telex** has four methods. They should be called in the jQuery UI-fashion, i.e:
+**Telex** has four methods. They can be called like:
 
-	$("#tx").telex("add", {
+	qtx.add({
 		id: "newMsg",
-		content: "This message is added while Telex is running"
+		content: "This message will be added while Telex is running"
 	});  
 
 #### add(message) ####
@@ -147,6 +143,10 @@ Adds a message to **Telex** while it is scrolling. Note that it takes some time 
 
 Removes the message with the given `id`.
 
+#### update(id, message) ####
+
+Updates the message with the given `id`.
+
 #### pause() ####
 
 Pauses the scroller.
@@ -154,3 +154,11 @@ Pauses the scroller.
 #### resume() ####
 
 Resumes scrolling.
+
+## Building telex.js ##
+
+Be sure that `npm` [is installed](https://www.npmjs.com/get-npm).
+
+Run `npm install`.
+
+Run `rollup -c`.

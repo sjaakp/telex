@@ -1,0 +1,18 @@
+
+@keyframes telex {
+  from {
+    margin-left: 0;
+  }
+}
+
+.telex {
+  display: flex;
+  white-space: nowrap;
+  overflow-x: hidden;
+  line-height: 1.7;
+  min-height: 1.7em;
+
+  > div {
+    padding: 0 1.5em;
+  }
+}
