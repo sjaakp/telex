@@ -57,6 +57,14 @@ A minimum HTML page with a **Telex** would look like this:
 
 The **Telex**-container gets the CSS-class `telex`. This may also be used for styling purposes.
 
+#### Load from CDN ####
+
+You may also load the **Telex** code from a content distribution network (CDN), like so:
+
+    <script src="https://unpkg.com/@sjaakp/telex/dist/telex.js"></script>
+
+
+
 ## Messages ##
 
 Messages can be set at create time, but also by assigning a value to **Telex**'s property `messages`, like so:
