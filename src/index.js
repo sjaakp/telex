@@ -1,7 +1,7 @@
 /* main js-file. Build with rollup -c */
 /*jshint esversion: 6,  strict: false*/
 
-function Widget(id, options, msgs = []) {
+function Widget(id, options, msgs) {
     Object.setPrototypeOf(this, {
 
         defaults: {
@@ -102,7 +102,9 @@ function Widget(id, options, msgs = []) {
 
             this.onCycle(this);
 
-            if (! prevMsgCnt) { this.animStart(this.element.firstChild); }  // If this is the first child, start animation
+            if (! prevMsgCnt) {
+                this.animStart(this.element.firstChild);
+            }  // If this is the first child, start animation
         },
 
         refresh: function() {
@@ -153,7 +155,6 @@ function Widget(id, options, msgs = []) {
         },
 
         update: function(id, msg) {
-            // console.log('update', this, id);
             let i = this._messages.findIndex(function (e) {
                 return e.id === id;
             });
@@ -220,8 +221,6 @@ function Widget(id, options, msgs = []) {
     });
 
     Object.assign(this, this.defaults, options);
-
-    this.messages = msgs;
 }
 
 function widget(id, options, msgs) {
