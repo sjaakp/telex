@@ -35,7 +35,6 @@ export default {
     },
     plugins: [
         resolve({
-            jsnext: true,
             customResolveOptions: {
                 moduleDirectory: 'node_modules'
             }

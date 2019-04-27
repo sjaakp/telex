@@ -221,6 +221,8 @@ function Widget(id, options, msgs) {
     });
 
     Object.assign(this, this.defaults, options);
+
+    this.messages = msgs;
 }
 
 function widget(id, options, msgs) {
