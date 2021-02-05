@@ -136,7 +136,7 @@ Options can be read with:
 
 ## Methods ##
 
-**Telex** has four methods. They can be called like:
+**Telex** has five methods. They can be called like:
 
 	qtx.add({
 		id: "newMsg",

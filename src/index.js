@@ -1,6 +1,18 @@
 /* main js-file. Build with rollup -c */
 /*jshint esversion: 6,  strict: false*/
 
+/**
+ *  options: see defaults.
+ *
+ *  msgs: array of messages.
+ *  A message is a plain object having the properties:
+ *  - content   The content of the message. Can be text, but also a piece of HTML (like a link).
+ *  - id        (Optional). Id of the message, starting with a word character.
+ *                  It is only used in the `remove` method. It is not used as a DOM-id.
+ *  - class     (Optional). The CSS-class of the message. May be used for styling purposes.
+ */
+import debounce from 'lodash.debounce';
+
 function Widget(id, options, msgs) {
     Object.setPrototypeOf(this, {
 
@@ -30,25 +42,15 @@ function Widget(id, options, msgs) {
              * tlx points to the Telex instance.
              */
             onCycle: function(tlx)  {
-//                console.log(new Date(), tlx);
             }
-
-            /**
-             *  array of messages.
-             *  A message is a plain object having the properties:
-             *  - content   The content of the message. Can be text, but also a piece of HTML (like a link).
-             *  - id        (Optional). Id of the message, starting with a word character.
-             *                  It is only used in the `remove` method. It is not used as a DOM-id.
-             *  - class     (Optional). The CSS-class of the message. May be used for styling purposes.
-             */
-        //    messages: []
-
         },
 
         animStart: function(msg) {
             if (msg)    {
                 let msgWidth = this._elementWidth(msg),
                     duration = 1000 * msgWidth / this.speed;
+
+                if (msg.classList.contains('telex-head'))  this.onCycle(this);
 
                 Object.assign(msg.style, {
                     marginLeft: `-${msgWidth}px`,
@@ -100,19 +102,9 @@ function Widget(id, options, msgs) {
 
             } while (accu.total > 0 && accu.total < (telexWidth + accu.max));    // ... until total width is big enough
 
-            this.onCycle(this);
-
             if (! prevMsgCnt) {
                 this.animStart(this.element.firstChild);
             }  // If this is the first child, start animation
-        },
-
-        refresh: function() {
-            if (! this.element.childNodes.length)   {
-                this.populate();
-            } else  {
-                this._pending = true;
-            }
         },
 
         _setAnimationState: function(state) {
@@ -134,7 +126,7 @@ function Widget(id, options, msgs) {
 
         set messages(msg)   {
             this._messages = msg;
-            this.refresh();
+            this.populate();
         },
 
         get messages()  {
@@ -143,34 +135,28 @@ function Widget(id, options, msgs) {
 
         add: function(message) {
             this._messages.unshift(message);
-            this.refresh();
+            this.populate();
         },
 
         remove: function(id) {
-            let i = this._messages.findIndex(function (e) {
-                return e.id === id;
-            });
+            let i = this._messages.findIndex(e => e.id === id);
             if (i >= 0) { this._messages.splice(i, 1); }
-            this.refresh();
+            this.populate();
         },
 
         update: function(id, msg) {
-            let i = this._messages.findIndex(function (e) {
-                return e.id === id;
-            });
+            let i = this._messages.findIndex(e => e.id === id);
             if (i >= 0) {
                 this._messages.splice(i, 1, msg);
             }
-            this.refresh();
+            this.populate();
         },
 
         pause: function()   {
-            this._paused = true;
             this._setAnimationState('paused');
         },
 
         resume: function()   {
-            this._paused = false;
             this._setAnimationState('running');
         },
     });
@@ -198,10 +184,6 @@ function Widget(id, options, msgs) {
             }
         }
         this.animStart(this.element.firstChild);
-        if (this._pending && this.element.firstChild.classList.contains('telex-head'))  {
-            this.populate();
-            this._pending = false;
-        }
     });
 
     this.element.addEventListener('mouseenter', e => {
@@ -216,13 +198,14 @@ function Widget(id, options, msgs) {
         }
     });
 
-    window.addEventListener('resize', e => {
-        this.refresh();
-    });
+    window.addEventListener('resize', debounce(e => {
+        this.populate();
+    }, 300));
 
     Object.assign(this, this.defaults, options);
 
-    this.messages = msgs;
+    this._messages = msgs;
+    this.populate();
 }
 
 function widget(id, options, msgs) {
