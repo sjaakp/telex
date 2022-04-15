@@ -1,4 +1,4 @@
-/* main js-file. Build with rollup -c */
+/* telex js-file. Build with rollup -c */
 /*jshint esversion: 6,  strict: false*/
 
 /**
@@ -170,17 +170,17 @@ function Widget(id, options, msgs) {
 
         if (this.direction === e.target.style.animationDirection) {     // skip if direction changed
             if (this.direction === 'normal')    {   // rotate child nodes right
-                if (! this._removeIfDiscarded(e.target))    {
-                    this.element.appendChild(e.target);
-                }
+                while (this._removeIfDiscarded(this.element.firstChild)) { /* do nothing */}
+                let c = this.element.firstChild
+                if (c) this.element.appendChild(c);
             }
             else {      // direction 'reverse', rotate child nodes left
                 let c, nodes = this.element.childNodes;
                 do {
                     c = nodes[nodes.length - 1];
-                  }
+                }
                 while (this._removeIfDiscarded(c));
-                this.element.insertBefore(c, this.element.firstChild);
+                if (c) this.element.insertBefore(c, this.element.firstChild);
             }
         }
         this.animStart(this.element.firstChild);
