@@ -78,7 +78,7 @@ function Widget(id, options, msgs) {
         },
 
         populate: function()    {
-            let prevMsgCnt = this.element.childNodes.length;
+            let prevMsgCnt = this.element.children.length;
 
             this.element.childNodes.forEach(v => { this.discardMsg(v); });
 
@@ -92,7 +92,7 @@ function Widget(id, options, msgs) {
                     div.innerHTML = cur.content;
                     if (cur.class) { div.classList.add(cur.class); }
                     if (idx === 0) { div.classList.add('telex-head'); }
-                    this.element.appendChild(div);
+                    this.element.append(div);
                     let w = this._elementWidth(div);
                     return {
                         total: ac.total + w,
@@ -103,12 +103,12 @@ function Widget(id, options, msgs) {
             } while (accu.total > 0 && accu.total < (telexWidth + accu.max));    // ... until total width is big enough
 
             if (! prevMsgCnt) {
-                this.animStart(this.element.firstChild);
+                this.animStart(this.element.firstElementChild);
             }  // If this is the first child, start animation
         },
 
         _setAnimationState: function(state) {
-            let firstChild = this.element.firstChild;
+            let firstChild = this.element.firstElementChild;
             if (firstChild) { firstChild.style.animationPlayState = state; }
         },
 
@@ -116,9 +116,14 @@ function Widget(id, options, msgs) {
             return el.getBoundingClientRect().width;    // returns fractional value (el.offsetWidth gives integer value)
         },
 
+        _isVisible(msg) {
+            return msg.getBoundingClientRect().right > this.element.getBoundingClientRect().left;
+        },
+
         _removeIfDiscarded: function(msg)   {
+            console.log(msg.getBoundingClientRect());
             if (msg && msg.classList.contains('telex-discard'))   {
-                this.element.removeChild(msg);
+                msg.remove();
                 return true;
             }
             return false;
@@ -170,20 +175,17 @@ function Widget(id, options, msgs) {
 
         if (this.direction === e.target.style.animationDirection) {     // skip if direction changed
             if (this.direction === 'normal')    {   // rotate child nodes right
-                while (this._removeIfDiscarded(this.element.firstChild)) { /* do nothing */}
-                let c = this.element.firstChild
-                if (c) this.element.appendChild(c);
+                while (this._removeIfDiscarded(this.element.firstElementChild)) { /* do nothing */}
+                let c = this.element.firstElementChild
+                if (c) this.element.append(c);
             }
             else {      // direction 'reverse', rotate child nodes left
-                let c, nodes = this.element.childNodes;
-                do {
-                    c = nodes[nodes.length - 1];
-                }
-                while (this._removeIfDiscarded(c));
-                if (c) this.element.insertBefore(c, this.element.firstChild);
+                while (this._removeIfDiscarded(this.element.lastElementChild)) { /* do nothing */}
+                let c = this.element.lastElementChild
+                if (c) this.element.prepend(c);
             }
         }
-        this.animStart(this.element.firstChild);
+        this.animStart(this.element.firstElementChild);
     });
 
     this.element.addEventListener('mouseenter', e => {
