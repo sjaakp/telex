@@ -36,7 +36,7 @@ export default {
     plugins: [
         resolve({
             customResolveOptions: {
-                moduleDirectory: 'node_modules'
+                moduleDirectories: ['node_modules']
             }
         }),
         commonjs(),
